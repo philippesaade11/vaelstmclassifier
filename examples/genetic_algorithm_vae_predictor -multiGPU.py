@@ -16,6 +16,7 @@ from numpy import array, arange, vstack, reshape, loadtxt, zeros, random
 from sklearn.externals import joblib
 from time import time
 from tqdm import tqdm
+from multiprocessing import Process
 
 from vaelstmpredictor.utils.model_utils import get_callbacks, init_adam_wn
 from vaelstmpredictor.utils.model_utils import save_model_in_pieces
@@ -116,10 +117,19 @@ def generate_random_chromosomes(population_size, clargs, data_instance,
         #     params_dict['size_dnn_hidden{}'.format(k)] = layer_size
 
         chrom = Chromosome(**params_dict)
-        chrom.train()
         generation_0.append(chrom)
-    
+
+    train_generation(generation_0)
     return generation_0
+
+def train_generation(generation):
+    process = []
+    for chrom in generation:
+        p = Process(target=chrom.train)
+        p.start()
+        process.append(p)
+    for p in process:
+        p.join()
 
 def select_parents(generation):
     total_fitness = sum(chrom.fitness for chrom in generation)
@@ -368,7 +378,7 @@ class Chromosome(VAEPredictor):
         validation_data = (vae_features_val, vae_labels_val)
         train_labels = [DI.labels_train, predictor_train, predictor_train, DI.labels_train]
         
-        with K.tf.device('./gpu:2'):
+        with K.tf.device('/gpu:'+(self.chromosomeID % clargs.num_gpus)):
             self.history = self.model.fit(vae_train, train_labels,
                                         shuffle = True,
                                         epochs = clargs.num_epochs,
@@ -577,11 +587,7 @@ if __name__ == '__main__':
             else:
                 new_generation.append(parent2)
 
-        for device in ['/gpu:0', '/gpu:1']:
-            with tf.device(device):
-                for child in new_generation:
-                    if not child.isTrained:
-                        child.train()
+        train_generation(new_generation)
 
         print('Time for Generation{}: {} minutes'.format(child1.generationID, 
                                                 (time() - start_while)//60))
