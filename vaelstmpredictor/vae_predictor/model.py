@@ -9,7 +9,7 @@ from keras.layers import Input, Dense, Lambda, Reshape, concatenate
 from keras.models import Model
 from keras.losses import binary_crossentropy, categorical_crossentropy
 from keras.losses import mean_squared_error
-from keras.utils.training_utils import multi_gpu_model
+from keras.utils.multi_gpu_utils import multi_gpu_model
 
 # from ..utils.midi_utils import write_sample
 
