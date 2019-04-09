@@ -9,6 +9,7 @@ from keras.layers import Input, Dense, Lambda, Reshape, concatenate
 from keras.models import Model
 from keras.losses import binary_crossentropy, categorical_crossentropy
 from keras.losses import mean_squared_error
+from keras.utils.training_utils import multi_gpu_model
 
 # from ..utils.midi_utils import write_sample
 
@@ -264,7 +265,10 @@ class VAEPredictor(object):
 
         self.model = Model(input_stack, out_stack)
         self.enc_model = Model(input_stack, enc_stack)
-        
+
+        #Make The Model Parallel Using Multiple GPUs
+        sel.model = multi_gpu_model(self.model, gpus=4)
+
         self.model.compile(  
                 optimizer = self.optimizer,
 
