@@ -199,7 +199,7 @@ class VAEPredictor(object):
         sum_exp_dnn_norm = K.sum(K.exp(dnn_norm), axis = -1)[:,None]
         return K.exp(dnn_norm)/sum_exp_dnn_norm
 
-    def get_model(self, batch_size = None, original_dim = None, 
+    def get_model(self, num_gpus = 0, batch_size = None, original_dim = None, 
                   vae_hidden_dims = None, vae_latent_dim = None, 
                   dnn_hidden_dims = None, use_prev_input = False, 
                   dnn_weight = 1.0, vae_kl_weight = 1.0, 
@@ -267,7 +267,7 @@ class VAEPredictor(object):
         self.enc_model = Model(input_stack, enc_stack)
 
         #Make The Model Parallel Using Multiple GPUs
-        sel.model = multi_gpu_model(self.model, gpus=4)
+        self.model = multi_gpu_model(self.model, gpus=num_gpus)
 
         self.model.compile(  
                 optimizer = self.optimizer,

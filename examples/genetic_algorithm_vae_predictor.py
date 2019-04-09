@@ -294,7 +294,7 @@ class Chromosome(VAEPredictor):
 
         self.dnn_latent_dim = clargs.n_labels-1
         
-        self.get_model()
+        self.get_model(num_gpus = clargs.num_gpus)
         self.neural_net = self.model
         self.fitness = 0
         
@@ -495,6 +495,8 @@ if __name__ == '__main__':
                 help='print more [INFO] and [DEBUG] statements')
     parser.add_argument('--make_plots', action='store_true',
                 help='make plots of growth in the best_loss over generations')
+    parser.add_argument('--num_gpus', type=int, default=0,
+                help='Specify the number of GPUs to use')
     
     clargs = parser.parse_args()
     
