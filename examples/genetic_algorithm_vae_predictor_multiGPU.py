@@ -119,17 +119,22 @@ def generate_random_chromosomes(population_size, clargs, data_instance,
         chrom = Chromosome(**params_dict)
         generation_0.append(chrom)
 
-    train_generation(generation_0)
+    train_generation(generation_0, clargs.num_gpus)
     return generation_0
 
-def train_generation(generation):
-    process = []
-    for chrom in generation:
-        p = Process(target=chrom.train)
-        p.start()
-        process.append(p)
-    for p in process:
-        p.join()
+def train_generation(generation, num_gpus=0):
+    if(num_gpus > 1):
+        process = []
+        for i in range(num_gpus):
+            gen_split = list(generation[i] for i in range(i, len(generation), num_gpus))
+            p = Process(target=train_generation, args=(gen_split,))
+            p.start()
+            process.append(p)
+        for p in process:
+            p.join()
+    else:
+        for chrom in generation:
+            chrom.train()
 
 def select_parents(generation):
     total_fitness = sum(chrom.fitness for chrom in generation)
@@ -329,7 +334,7 @@ class Chromosome(VAEPredictor):
 
         if verbose: self.neural_net.summary()
 
-    def train(self, verbose = False):
+    def train(self, gpu_name = '', verbose = False):
         """Training control operations to create VAEPredictor instance, 
             organize the input data, and train the network.
         
@@ -378,13 +383,21 @@ class Chromosome(VAEPredictor):
         validation_data = (vae_features_val, vae_labels_val)
         train_labels = [DI.labels_train, predictor_train, predictor_train, DI.labels_train]
         
-        with K.tf.device('/gpu:'+(self.chromosomeID % clargs.num_gpus)):
+        if gpu_name == '':
             self.history = self.model.fit(vae_train, train_labels,
                                         shuffle = True,
                                         epochs = clargs.num_epochs,
                                         batch_size = clargs.batch_size,
                                         callbacks = callbacks,
                                         validation_data = validation_data)
+        else :
+            with K.tf.device(gpu_name):
+                self.history = self.model.fit(vae_train, train_labels,
+                                            shuffle = True,
+                                            epochs = clargs.num_epochs,
+                                            batch_size = clargs.batch_size,
+                                            callbacks = callbacks,
+                                            validation_data = validation_data)
 
         max_kl_anneal = max(clargs.kl_anneal, clargs.w_kl_anneal)
         self.best_ind = np.argmin([x if i >= max_kl_anneal + 1 else np.inf \
@@ -489,9 +502,9 @@ if __name__ == '__main__':
                 help="number of epochs before kl loss term is 1.0")
     parser.add_argument("--w_kl_anneal", type=int, default=0, 
                 help="number of epochs before w's kl loss term is 1.0")
-    parser.add_argument('--log_dir', type=str, default='../data/logs',
+    parser.add_argument('--log_dir', type=str, default='data/logs',
                 help='basedir for saving log files')
-    parser.add_argument('--model_dir', type=str, default='../data/models',
+    parser.add_argument('--model_dir', type=str, default='data/models',
                 help='basedir for saving model weights')    
     parser.add_argument('--train_file', type=str, default='MNIST',
                 help='file of training data (.pickle)')
@@ -587,7 +600,7 @@ if __name__ == '__main__':
             else:
                 new_generation.append(parent2)
 
-        train_generation(new_generation)
+        train_generation(new_generation, clargs.num_gpus)
 
         print('Time for Generation{}: {} minutes'.format(child1.generationID, 
                                                 (time() - start_while)//60))
