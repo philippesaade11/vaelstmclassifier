@@ -295,6 +295,7 @@ class Chromosome(VAEPredictor):
         self.dnn_latent_dim = clargs.n_labels-1
         
         self.get_model()
+        self.isTrained = False
         self.neural_net = self.model
         self.fitness = 0
         
@@ -367,12 +368,13 @@ class Chromosome(VAEPredictor):
         validation_data = (vae_features_val, vae_labels_val)
         train_labels = [DI.labels_train, predictor_train, predictor_train, DI.labels_train]
         
-        self.history = self.model.fit(vae_train, train_labels,
-                                    shuffle = True,
-                                    epochs = clargs.num_epochs,
-                                    batch_size = clargs.batch_size,
-                                    callbacks = callbacks,
-                                    validation_data = validation_data)
+        with K.tf.device('./gpu:2'):
+            self.history = self.model.fit(vae_train, train_labels,
+                                        shuffle = True,
+                                        epochs = clargs.num_epochs,
+                                        batch_size = clargs.batch_size,
+                                        callbacks = callbacks,
+                                        validation_data = validation_data)
 
         max_kl_anneal = max(clargs.kl_anneal, clargs.w_kl_anneal)
         self.best_ind = np.argmin([x if i >= max_kl_anneal + 1 else np.inf \
@@ -385,6 +387,7 @@ class Chromosome(VAEPredictor):
         #                             if 'val_' in key and 'loss' in key])
         
         self.fitness = 1.0 / self.best_loss['val_loss']
+        self.isTrained = True
         
         if verbose: 
             print("Generation: {}".format(self.generationID))
@@ -564,17 +567,21 @@ if __name__ == '__main__':
             child1, mutation_happened2 = mutate(child2, mutate_prob, 
                                                 verbose=verbose)
             
-            if crossover_happened or mutation_happened1: 
-                child1.train()
+            if crossover_happened or mutation_happened1:
                 new_generation.append(child1)
             else:
                 new_generation.append(parent1)
 
-            if crossover_happened or mutation_happened2: 
-                child2.train()
+            if crossover_happened or mutation_happened2:
                 new_generation.append(child2)
             else:
                 new_generation.append(parent2)
+
+        for device in ['/gpu:0', '/gpu:1']:
+            with tf.device(device):
+                for child in new_generation:
+                    if not child.isTrained:
+                        child.train()
 
         print('Time for Generation{}: {} minutes'.format(child1.generationID, 
                                                 (time() - start_while)//60))
