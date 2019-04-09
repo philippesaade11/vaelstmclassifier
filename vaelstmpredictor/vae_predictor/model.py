@@ -267,7 +267,8 @@ class VAEPredictor(object):
         self.enc_model = Model(input_stack, enc_stack)
 
         #Make The Model Parallel Using Multiple GPUs
-        self.model = multi_gpu_model(self.model, gpus=num_gpus)
+        if(num_gpus >= 1):
+            self.model = multi_gpu_model(self.model, gpus=num_gpus)
 
         self.model.compile(  
                 optimizer = self.optimizer,
