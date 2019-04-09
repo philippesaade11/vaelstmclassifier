@@ -4,6 +4,7 @@ import argparse
 import matplotlib.pyplot as plt
 import numpy as np
 import os
+import multiprocessing as mp
 # import random
 
 from contextlib import redirect_stdout
@@ -16,7 +17,6 @@ from numpy import array, arange, vstack, reshape, loadtxt, zeros, random
 from sklearn.externals import joblib
 from time import time
 from tqdm import tqdm
-from multiprocessing import Process
 
 from vaelstmpredictor.utils.model_utils import get_callbacks, init_adam_wn
 from vaelstmpredictor.utils.model_utils import save_model_in_pieces
@@ -124,14 +124,13 @@ def generate_random_chromosomes(population_size, clargs, data_instance,
 
 def train_generation(generation, num_gpus=0, gpu_name=''):
     if(num_gpus > 1):
-        process = []
+        pool = mp.Pool(processes=num_gpus)
         for i in range(num_gpus):
-            gen_split = list(generation[i] for i in range(i, len(generation), num_gpus))
-            p = Process(target=train_generation, args=(gen_split, 0, gpu_name))
-            p.start()
-            process.append(p)
-        for p in process:
-            p.join()
+            gen_split = list(generation[x] for x in range(i, len(generation), num_gpus))
+            pool.apply(train_generation, [gen_split, 0, '/gpu'+str(i)])
+
+        pool.close()
+        pool.join()
     else:
         for chrom in generation:
             chrom.train(gpu_name=gpu_name)
