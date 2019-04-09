@@ -122,19 +122,19 @@ def generate_random_chromosomes(population_size, clargs, data_instance,
     train_generation(generation_0, clargs.num_gpus)
     return generation_0
 
-def train_generation(generation, num_gpus=0):
+def train_generation(generation, num_gpus=0, gpu_name=''):
     if(num_gpus > 1):
         process = []
         for i in range(num_gpus):
             gen_split = list(generation[i] for i in range(i, len(generation), num_gpus))
-            p = Process(target=train_generation, args=(gen_split,))
+            p = Process(target=train_generation, args=(gen_split, 0, gpu_name))
             p.start()
             process.append(p)
         for p in process:
             p.join()
     else:
         for chrom in generation:
-            chrom.train()
+            chrom.train(gpu_name=gpu_name)
 
 def select_parents(generation):
     total_fitness = sum(chrom.fitness for chrom in generation)
