@@ -131,10 +131,7 @@ def train_generation(generation, num_gpus=0, gpu_name=''):
 
         pool.close()
         pool.join()
-
-        for i in range(num_gpus):
-            tf.device_scope('/gpu:'+str(i)):
-                train_generation(gen_split)
+        
     else:
         for chrom in generation:
             chrom.train(gpu_name=gpu_name)
@@ -142,7 +139,8 @@ def train_generation(generation, num_gpus=0, gpu_name=''):
 def train_generation(generation, num_gpus=0):
     if(num_gpus > 1):
         for i in range(num_gpus):
-            K.tf.device_scope('/gpu:'+str(i)):
+            with K.tf.device('/device:GPU:'+str(i)):
+                gen_split = list(generation[x] for x in range(i, len(generation), num_gpus))
                 train_generation(gen_split)
     else:
         for chrom in generation:
