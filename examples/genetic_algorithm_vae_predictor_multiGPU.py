@@ -119,24 +119,34 @@ def generate_random_chromosomes(population_size, clargs, data_instance,
         chrom = Chromosome(**params_dict)
         generation_0.append(chrom)
 
-    train_generation(generation_0, clargs.num_gpus)
+    train_generation(generation_0, num_gpus=clargs.num_gpus)
     return generation_0
-
+"""
 def train_generation(generation, num_gpus=0, gpu_name=''):
     if(num_gpus > 1):
         pool = mp.Pool(processes=num_gpus)
         for i in range(num_gpus):
             gen_split = list(generation[x] for x in range(i, len(generation), num_gpus))
-            pool.apply(train_generation, [gen_split, 0, '/gpu'+str(i)])
+            pool.apply_async(train_generation, [gen_split, 0, '/gpu'+str(i)])
 
         pool.close()
         pool.join()
-        
-        for chrom in generation:
-            chrom.save_train()
+
+        for i in range(num_gpus):
+            tf.device_scope('/gpu:'+str(i)):
+                train_generation(gen_split)
     else:
         for chrom in generation:
             chrom.train(gpu_name=gpu_name)
+"""
+def train_generation(generation, num_gpus=0):
+    if(num_gpus > 1):
+        for i in range(num_gpus):
+            K.tf.device_scope('/gpu:'+str(i)):
+                train_generation(gen_split)
+    else:
+        for chrom in generation:
+            chrom.train()
     
 
 def select_parents(generation):
@@ -415,7 +425,6 @@ class Chromosome(VAEPredictor):
         self.fitness = 1.0 / self.best_loss['val_loss']
         self.isTrained = True
 
-    def save_train(self):
         if verbose: 
             print("Generation: {}".format(self.generationID))
             print("Chromosome: {}".format(self.chromosomeID))
@@ -604,7 +613,7 @@ if __name__ == '__main__':
             else:
                 new_generation.append(parent2)
 
-        train_generation(new_generation, clargs.num_gpus)
+        train_generation(new_generation, num_gpus=clargs.num_gpus)
 
         print('Time for Generation{}: {} minutes'.format(child1.generationID, 
                                                 (time() - start_while)//60))
