@@ -121,20 +121,25 @@ def generate_random_chromosomes(population_size, clargs, data_instance,
 
     train_generation(generation_0, num_gpus=clargs.num_gpus)
     return generation_0
-"""
+
 def train_generation(generation, num_gpus=0, gpu_name=''):
     if(num_gpus > 1):
         pool = mp.Pool(processes=num_gpus)
         for i in range(num_gpus):
             gen_split = list(generation[x] for x in range(i, len(generation), num_gpus))
-            pool.apply_async(train_generation, [gen_split, 0, '/gpu'+str(i)])
+            pool.apply_async(train_generation, [gen_split, 0, '/device:GPU:'+str(i)])
 
         pool.close()
         pool.join()
         
     else:
-        for chrom in generation:
-            chrom.train(gpu_name=gpu_name)
+        if gpu_name = '':
+            for chrom in generation:
+                chrom.train()
+        else :
+            with K.tf.device(gpu_name):
+                for chrom in generation:
+                    chrom.train()
 """
 def train_generation(generation, num_gpus=0):
     if(num_gpus > 1):
@@ -145,7 +150,7 @@ def train_generation(generation, num_gpus=0):
     else:
         for chrom in generation:
             chrom.train()
-    
+"""
 
 def select_parents(generation):
     total_fitness = sum(chrom.fitness for chrom in generation)
