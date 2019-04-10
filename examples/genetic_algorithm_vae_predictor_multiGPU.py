@@ -131,9 +131,13 @@ def train_generation(generation, num_gpus=0, gpu_name=''):
 
         pool.close()
         pool.join()
+        
+        for chrom in generation:
+            chrom.save_train()
     else:
         for chrom in generation:
             chrom.train(gpu_name=gpu_name)
+    
 
 def select_parents(generation):
     total_fitness = sum(chrom.fitness for chrom in generation)
@@ -410,7 +414,8 @@ class Chromosome(VAEPredictor):
         
         self.fitness = 1.0 / self.best_loss['val_loss']
         self.isTrained = True
-        
+
+    def save_train(self):
         if verbose: 
             print("Generation: {}".format(self.generationID))
             print("Chromosome: {}".format(self.chromosomeID))
