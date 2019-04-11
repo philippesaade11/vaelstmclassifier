@@ -127,19 +127,14 @@ def train_generation(generation, num_gpus=0, gpu_name=''):
         pool = mp.Pool(processes=num_gpus)
         for i in range(num_gpus):
             gen_split = list(generation[x] for x in range(i, len(generation), num_gpus))
-            pool.apply_async(train_generation, [gen_split, 0, '/device:GPU:'+str(i)])
+            pool.apply_async(train_generation, [gen_split, 0, '/gpu:'+str(i)])
 
         pool.close()
         pool.join()
         
     else:
-        if gpu_name = '':
-            for chrom in generation:
-                chrom.train()
-        else :
-            with K.tf.device(gpu_name):
-                for chrom in generation:
-                    chrom.train()
+        for chrom in generation:
+            chrom.train(gpu_name=gpu_name)
 """
 def train_generation(generation, num_gpus=0):
     if(num_gpus > 1):
@@ -398,22 +393,22 @@ class Chromosome(VAEPredictor):
 
         validation_data = (vae_features_val, vae_labels_val)
         train_labels = [DI.labels_train, predictor_train, predictor_train, DI.labels_train]
-        
-        if gpu_name == '':
+
+        if(gpu_name == ""):
             self.history = self.model.fit(vae_train, train_labels,
                                         shuffle = True,
                                         epochs = clargs.num_epochs,
                                         batch_size = clargs.batch_size,
                                         callbacks = callbacks,
                                         validation_data = validation_data)
-        else :
+        else:
             with K.tf.device(gpu_name):
                 self.history = self.model.fit(vae_train, train_labels,
-                                            shuffle = True,
-                                            epochs = clargs.num_epochs,
-                                            batch_size = clargs.batch_size,
-                                            callbacks = callbacks,
-                                            validation_data = validation_data)
+                                        shuffle = True,
+                                        epochs = clargs.num_epochs,
+                                        batch_size = clargs.batch_size,
+                                        callbacks = callbacks,
+                                        validation_data = validation_data)
 
         max_kl_anneal = max(clargs.kl_anneal, clargs.w_kl_anneal)
         self.best_ind = np.argmin([x if i >= max_kl_anneal + 1 else np.inf \
