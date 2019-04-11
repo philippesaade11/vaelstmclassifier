@@ -402,6 +402,7 @@ class Chromosome(VAEPredictor):
                                         callbacks = callbacks,
                                         validation_data = validation_data)
         else:
+            print("Training Chromosome "+str(self.chromosomeID)+" on GPU "+gpu_name)
             with K.tf.device(gpu_name):
                 self.history = self.model.fit(vae_train, train_labels,
                                         shuffle = True,
