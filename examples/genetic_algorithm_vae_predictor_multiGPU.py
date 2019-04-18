@@ -129,8 +129,8 @@ def train_generation(generation, num_gpus=0, gpu_name=''):
             gen_split = list(generation[x] for x in range(i, len(generation), num_gpus))
             pool.apply_async(train_generation, [gen_split, 0, '/gpu:'+str(i)])
 
-        pool.close()
         pool.join()
+        pool.close()
         
     else:
         for chrom in generation:
