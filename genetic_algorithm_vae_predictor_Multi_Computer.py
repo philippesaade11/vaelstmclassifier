@@ -6,8 +6,22 @@ import numpy as np
 import os
 from time import time
 import json
+import sys
+from sklearn.externals import joblib
+from contextlib import redirect_stdout
 
-from GeneticAlgorithm import *
+from keras import backend as K
+from keras.utils import to_categorical
+
+from vaelstmpredictor.utils.model_utils import get_callbacks, init_adam_wn
+from vaelstmpredictor.utils.model_utils import save_model_in_pieces
+from vaelstmpredictor.utils.model_utils import AnnealLossWeight
+from vaelstmpredictor.utils.data_utils import MNISTData
+from vaelstmpredictor.utils.weightnorm import data_based_init
+from vaelstmpredictor.vae_predictor.model import VAEPredictor
+from vaelstmpredictor.vae_predictor.train import train_vae_predictor
+
+from GeneticAlgorithm import * 
 
 from paramiko import SSHClient, SFTPClient, Transport, AutoAddPolicy
 import multiprocessing as mp
@@ -37,8 +51,8 @@ def train_generation(generation, clargs):
                 process.start()
 
 def train_chromosome(chromosome, machine, queue):
-    sys.stdout = open('output'+str(chrom.chromosomeID)+".txt", 'w')
-    sys.stderr = open('error'+str(chrom.chromosomeID)+".txt", 'w')
+    sys.stdout = open('output'+str(chromosome.chromosomeID)+".txt", 'w')
+    sys.stderr = open('error'+str(chromosome.chromosomeID)+".txt", 'w')
     
     ssh = SSHClient()
     ssh.set_missing_host_key_policy(AutoAddPolicy())
@@ -56,6 +70,11 @@ def train_chromosome(chromosome, machine, queue):
         error = "".join(stderr.readlines())
         if error != "":
             print("Errors has occured while unzipping file in machine: "+str(machine)+"\nError: "+error)
+                
+        stdin, stdout, stderr = ssh.exec_command('cd vaelstmpredictor; ../anaconda3/envs/tf_gpu/bin/python setup.py install')
+        error = "".join(stderr.readlines())
+        if error != "":
+            print("Errors setting up vaelstmpredictor: "+str(machine)+"\nError: "+error)
         sftp.close()
         transport.close()
         print("File uploaded")
@@ -74,7 +93,7 @@ def train_chromosome(chromosome, machine, queue):
                    }
     
     print("Executing command")
-    command = "python vaelstmclassifier/run_chromosome.py \""+json.dumps(params)+"\""
+    command = "anaconda3/envs/tf_gpu/bin/python vaelstmclassifier/run_chromosome.py \""+json.dumps(params)+"\""
     stdin, stdout, stderr = ssh.exec_command(command)
     error = "".join(stderr.readlines())
     if error != "":
@@ -82,6 +101,7 @@ def train_chromosome(chromosome, machine, queue):
     if "".join(stdout.readlines()[-4:]) == "done":
         print("Trained Successfully")
     queue.put(machine)
+    chromosome.isTrained = True
     print("Command Executed")
     ssh.close()
                 

@@ -25,6 +25,8 @@ from vaelstmpredictor.utils.weightnorm import data_based_init
 from vaelstmpredictor.vae_predictor.model import VAEPredictor
 from vaelstmpredictor.vae_predictor.train import train_vae_predictor
 
+from Chromosome import Chromosome
+
 def configure_multi_hidden_layers(num_hidden, input_size, 
                                   min_hidden1, max_hidden,
                                   start_small = True, init_large = True):

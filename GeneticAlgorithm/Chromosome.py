@@ -123,9 +123,9 @@ class Chromosome(VAEPredictor):
                     min_epoch = min_epoch, do_log = self.clargs.do_log, 
                     do_chckpt = self.clargs.do_chckpt)
 
-        if clargs.kl_anneal > 0: 
+        if self.clargs.kl_anneal > 0: 
             self.vae_kl_weight = K.variable(value=0.1)
-        if clargs.w_kl_anneal > 0: 
+        if self.clargs.w_kl_anneal > 0: 
             self.dnn_kl_weight = K.variable(value=0.0)
         
         # self.clargs.optimizer, was_adam_wn = init_adam_wn(self.clargs.optimizer)
@@ -136,7 +136,7 @@ class Chromosome(VAEPredictor):
         vae_train = DI.data_train
         vae_features_val = DI.data_valid
 
-        data_based_init(self.model, DI.data_train[:clargs.batch_size])
+        data_based_init(self.model, DI.data_train[:self.clargs.batch_size])
 
         vae_labels_val = [DI.labels_valid, predictor_validation, 
                             predictor_validation,DI.labels_valid]
@@ -146,12 +146,12 @@ class Chromosome(VAEPredictor):
         
         self.history = self.model.fit(vae_train, train_labels,
                                     shuffle = True,
-                                    epochs = clargs.num_epochs,
-                                    batch_size = clargs.batch_size,
+                                    epochs = self.clargs.num_epochs,
+                                    batch_size = self.clargs.batch_size,
                                     callbacks = callbacks,
                                     validation_data = validation_data)
 
-        max_kl_anneal = max(clargs.kl_anneal, clargs.w_kl_anneal)
+        max_kl_anneal = max(self.clargs.kl_anneal, self.clargs.w_kl_anneal)
         self.best_ind = np.argmin([x if i >= max_kl_anneal + 1 else np.inf \
                     for i,x in enumerate(self.history.history['val_loss'])])
         
